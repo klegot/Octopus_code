@@ -4,15 +4,19 @@
             "name": "AVR",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/lib/avr/include/**"
+                "/opt/avr-gcc/avr/include/**"
             ],
             "defines": [
-                "__AVR_ATmega328P__"
+                "__AVR_ATtiny414__",
+                "__AVR_XMEGA__"
             ],
-            "compilerPath": "/usr/bin/avr-gcc",
+            "compilerPath": "/opt/avr-gcc/bin/avr-gcc",
+            "compilerArgs": [
+                "-mmcu=attiny414"
+            ],
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-arm"
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4

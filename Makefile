@@ -1,35 +1,40 @@
-TARGET = octopus_test
-BUILD_DIR = build
+# --- Настройки проекта ---
+TARGET     = main
+MCU        = attiny414
 
-MCU = attiny44
-F_CPU = 3333333UL
-
-PORT = /dev/ttyUSB0
+# --- Настройки программатора ---
+PORT       = /dev/ttyUSB0
 PROGRAMMER = serialupdi
 
-CC = avr-gcc
-OBJCOPY = avr-objcopy
-SIZE = avr-size
-AVRDUDE = avrdude
+# --- Направления к папкам ---
+INC_DIR    = Inc
+SRC_DIR    = Src
+BUILD_DIR  = build
 
-CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -O2 -Wall -std=gnu99
+.PHONY: all flash clean
 
-.PHONY: all clean flash
+all: clean
+	mkdir -p $(BUILD_DIR)
+	# 1. Компиляция драйвера светодиодов в объектный файл (.o)
+	# Флаг -I$(INC_DIR) говорит компилятору искать хидеры в папке Inc
+	/opt/avr-gcc/bin/avr-gcc -mmcu=$(MCU) -Os -Wall -I$(INC_DIR) -c $(SRC_DIR)/ws2812b_driver.c -o $(BUILD_DIR)/ws2812b_driver.o
+	
+	# 2. Компиляция главного файла main.c в объектный файл (.o)
+	/opt/avr-gcc/bin/avr-gcc -mmcu=$(MCU) -Os -Wall -I$(INC_DIR) -c $(SRC_DIR)/main.c -o $(BUILD_DIR)/main.o
+	
+	# 3. Линовка ОБОИХ объектных файлов вместе и создание исполняемого .elf файла
+	/opt/avr-gcc/bin/avr-gcc -mmcu=$(MCU) $(BUILD_DIR)/main.o $(BUILD_DIR)/ws2812b_driver.o -o $(BUILD_DIR)/$(TARGET).elf
+	
+	# 4. Конвертация готового .elf в .hex формат для отправки в чип
+	/opt/avr-gcc/bin/avr-objcopy -j .text -j .data -O ihex $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex
+	# !!!!!!!!!!!!
+	# Успех братан
+	# !!!!!!!!!!!!
 
-all: $(BUILD_DIR)/$(TARGET).hex
-
-$(BUILD_DIR)/$(TARGET).elf: octopus_test.c
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) $< -o $@
-	@echo ""
-	$(SIZE) --format=avr --mcu=$(MCU) $@
-	@echo ""
-
-$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
-	$(OBJCOPY) -O ihex -R .eeprom $< $@
-
-flash: $(BUILD_DIR)/$(TARGET).hex
-	$(AVRDUDE) -p attiny414 -c $(PROGRAMMER) -P $(PORT) -U flash:w:$<:i
+flash:
+	# 5. Прошивка платы через avrdude (берем файл строго из папки build)
+	avrdude -p $(MCU) -c $(PROGRAMMER) -P $(PORT) -U flash:w:$(BUILD_DIR)/$(TARGET).hex:i
 
 clean:
+	# Безопасно удаляем всю папку build со всем её содержимым
 	rm -rf $(BUILD_DIR)
